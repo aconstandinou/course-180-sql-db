@@ -161,3 +161,149 @@ SELECT events.name AS event, events.starts_at, sections.name AS section, seats.r
     INNER JOIN seats ON tickets.seat_id = seats.id
     INNER JOIN sections ON seats.section_id = sections.id
 WHERE customers.email = 'gennaro.rath@mcdermott.co';
+
+################################################################################
+################################# Foreign Keys #################################
+
+either
+- a column that represnets a relationship between two rows by pointing to a specific row
+    in another table using its 'primary key'. 'FK' column
+- a constraint that enforces certain rules about what values are permitted in these FK
+    relationships. 'FK constraint'
+
+example: PRODUCT table -----€ ORDER table
+
+ORDERS                                                      PRODUCTS
+id serial PRIMARY KEY,                                      id serial PRIMARY KEY,
+product_id integer REFERENCES products (id),                name varchar NOT NULL
+quantity integer NOT NULL
+
+# Creating Foreign Key Columns
+
+Since the products table shown above uses an integer type for its
+  primary key column, 'orders.product_id' is also an integer column.
+
+# Creating Foreign Key Constraints
+
+1) dd a REFERENCES clause to the description of a column in a CREATE TABLE statement
+
+CREATE TABLE orders (
+  id serial PRIMARY KEY,
+  product_id integer REFERENCES products (id),
+  quantity integer NOT NULL
+);
+
+2) Add the FK constraint separately, just as you would any other constraint (note the use of FOREIGN KEY instead of CHECK
+
+ALTER TABLE orders ADD CONSTRAINT orders_product_id_fkey FOREIGN KEY (product_id) REFERENCES products(id);
+
+# Referential Integrity
+- The database does this by ensuring that every value in a foreign key column exists
+    in the primary key column of the referenced table.
+- Attempts to insert rows that violate the tables constraints will be rejected.
+
+################################################################################
+############################ FOREIGN KEYS EXERCISES ############################
+
+# 2.
+
+ALTER TABLE orders ADD CONSTRAINT orders_product_id_fkey FOREIGN KEY (product_id) REFERENCES products(id);
+
+# 3.
+
+INSERT INTO products (name) VALUES ('small bolt');
+INSERT INTO products (name) VALUES ('large bolt');
+
+INSERT INTO orders (product_id, quantity) VALUES (1, 10);
+INSERT INTO orders (product_id, quantity) VALUES (1, 25);
+INSERT INTO orders (product_id, quantity) VALUES (2, 15);
+
+# 4.
+
+SELECT orders.quantity, products.name FROM orders
+INNER JOIN products ON orders.product_id = products.id;
+
+# 5.
+Answer: Yes you can.
+
+INSERT INTO orders (quantity) VALUES (50);
+
+Does not cause an error and product_id is NULL.
+Also, looking at '\d orders' shows that column product_id has no constraints.
+
+# 6.
+Cant add a constraint until NULL VALUES are removed from column.
+
+ALTER TABLE orders ALTER COLUMN product_id SET NOT NULL;
+
+result - ERROR: column "product_id" contains null values
+
+# 7.
+
+DELETE FROM orders WHERE product_id IS NULL;
+ALTER TABLE orders ALTER COLUMN product_id SET NOT NULL;
+
+# 8.
+
+CREATE TABLE reviews (
+  id serial,
+  review varchar(50) NOT NULL,
+  product_id integer NOT NULL,
+  PRIMARY KEY (id),
+  FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+# 9.
+INSERT INTO reviews (review, product_id) VALUES ('a little small', 1);
+INSERT INTO reviews (review, product_id) VALUES ('very round!', 1);
+INSERT INTO reviews (review, product_id) VALUES ('could have been smaller', 2);
+
+# 10.
+False. A foreign key constraint does not prevent NULL values from being stored.
+As a result, it is often necessary to use NOT NULL and a foreign key constraint together.
+
+################################################################################
+################################# RELATIONSHIPS ################################
+################################################################################
+
+
+################################################################################
+########################### One to Many Relationships ##########################
+
+- Import file
+$psql -d one_many < one_many.sql
+
+Consider the following table:
+
+'CALLS'
+id when                  duration  first_name  last_name  number
+1  2016-01-02 04:59:00   1821      William     Swift      7204890809
+2  2016-01-08 15:30:00   350       Yuan        Ku         195677796
+3  2016-01-11 11:06:00   67        Tamila      Chichigov  5702700921
+
+PRIMARY KEY -> id
+
+What happens when we add more calls to same phone number?
+
+'CALLS'
+id when                  duration  first_name  last_name  number
+1  2016-01-02 04:59:00   1821      William     Swift      7204890809
+2  2016-01-08 15:30:00   350       Yuan        Ku         195677796
+3  2016-01-11 11:06:00   67        Tamila      Chichigov  5702700921
+4  2016-01-13 18:13:00   2521      Tamila      Chichigov  5702700921
+
+First glance: it looks okay, but we are starting to duplicate data.
+'Duplicated' data -> first_name, last_name, number
+
+'Issue' 1) if we need to update a name or phone number, we need to update every row.
+           if we missed one change -> 'update anomaly': not sure which data would be right.
+        2) 'insertion anomalies': we can only place caller info if they received a call.
+           'deletion anomalies': we lose all caller info if we delete the history.
+
+'Normalization': process of designing schema that minimize or eliminate the possible occurence of
+                 these anomalies. Basic procedure involves extracting data into additional tables
+                 and using 'foreign keys' to tie it back to associated data.
+
+
+
+.
