@@ -304,6 +304,120 @@ First glance: it looks okay, but we are starting to duplicate data.
                  these anomalies. Basic procedure involves extracting data into additional tables
                  and using 'foreign keys' to tie it back to associated data.
 
+'Normalization' Process 1: creating a CONTACTS table
+
+calls table                                         contacts table
+id integer NOT NULL PK,                      '-->'  id integer NOT NULL PK,
+when timestamp without timezone NOT NULL,    '|'    first_name text NOT NULL,
+duration integer NOT NULL                    '|'    last_name text NOT NULL,
+contact_id integer NOT NULL Foreign Key '------'    number varchar(10) NOT NULL
+
+################################## Exercises ##################################
+
+# 1.
+INSERT INTO calls ("when", duration, contact_id) VALUES
+('2016-01-18 14:47:00', 632, 6);
+
+# 2.
+SELECT calls.when, calls.duration, contacts.first_name FROM calls
+INNER JOIN contacts ON calls.contact_id = contacts.id
+WHERE (contacts.first_name || ' ' || contacts.last_name) != 'William Swift';
+
+# 3.
+
+INSERT INTO contacts (first_name, last_name, number) VALUES
+('Merve', 'Elk', 6343511126),
+('Sawa', 'Fyodorov', 6125594874);
+
+INSERT INTO calls ("when", duration, contact_id) VALUES
+('2016-01-17 11:52:00', 175, 26),
+('2016-01-18 21:22:00', 79, 27);
+
+# 4.
+ALTER TABLE contacts ADD CONSTRAINT number_unique UNIQUE (number);
+
+# 5.
+INSERT INTO contacts (first_name, last_name, number) VALUES
+('Merve', 'Elk', 6343511126);
+
+ERROR: duplicate key value violates unique constraint 'number_unique'
+DETAIL: Key(number)=(6343511126) already exists.
+
+# 6.
+Because "when" is a reserved word in PostgreSQL.
+Full list here #http://www.postgresql.org/docs/9.5/static/sql-keywords-appendix.html
+
+# 7.
+
+Draw an ERD. One to many relationship from contacts to calls.
+
+###############################################################################
+############## Extracting a 1:M Relationship From Existing Data ###############
+
+- Import file
+$psql -d extracting_1m < extracting_1m.sql
+
+- In this assignment 1) separate data in a single table into two tables
+                     2) create a foreign key to connect values that are now stored
+                          in two tables instead of one.
+
+- Issues with current schema: 1) cannot store director data unless they have a film. 'insertion anomaly'
+                                 if we remove a film, we also remove a director. 'deletion anomaly'
+                              2) director name is duplicated and when a directors name changes,
+                                   we would have to update every row. 'update anomaly'
+
+Steps to 'Normalization'
+
+1 - Create new table 'directors'
+CREATE TABLE directors (id serial PRIMARY KEY, name text NOT NULL);
+
+2 - Insert data.
+
+INSERT INTO directors (name) VALUES ('John McTiernan');
+INSERT INTO directors (name) VALUES ('Michael Curtiz');
+INSERT INTO directors (name) VALUES ('Francis Ford Coppola');
+INSERT INTO directors (name) VALUES ('Michael Anderson');
+INSERT INTO directors (name) VALUES ('Tomas Alfredson');
+INSERT INTO directors (name) VALUES ('Mike Nichols');
+
+3 - Create relationship between directors and films table.
+
+ALTER TABLE films ADD COLUMN director_id integer REFERENCES directors (id);
+
+4 - Need to update the new column in films
+
+UPDATE films SET director_id=1 WHERE director = 'John McTiernan';
+UPDATE films SET director_id=2 WHERE director = 'Michael Curtiz';
+UPDATE films SET director_id=3 WHERE director = 'Francis Ford Coppola';
+UPDATE films SET director_id=4 WHERE director = 'Michael Anderson';
+UPDATE films SET director_id=5 WHERE director = 'Tomas Alfredson';
+UPDATE films SET director_id=6 WHERE director = 'Mike Nichols';
+
+5 - Now, we cleanup: films.director_id to be NOT NULL now that all the rows contain a value in that column
+ALTER TABLE films ALTER COLUMN director_id SET NOT NULL;
+
+6 - Drop the director column from films.
+ALTER TABLE films DROP COLUMN director;
+
+7 - Restore the constraint that was on the films.director column to directors.name
+ALTER TABLE directors ADD CONSTRAINT valid_name
+CHECK (length(name) >= 1 AND "position"(name, ' ') > 0);
+
+8 - By using an inner join, we can get the same data we originally had
+
+SELECT films.title, films.year, directors.name AS director, films.duration
+  FROM films INNER JOIN directors ON directors.id = films.director_id;
+
+
+
+
+
+
+
+
+
+
+
 
 
 .
