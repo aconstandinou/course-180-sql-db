@@ -408,16 +408,165 @@ CHECK (length(name) >= 1 AND "position"(name, ' ') > 0);
 SELECT films.title, films.year, directors.name AS director, films.duration
   FROM films INNER JOIN directors ON directors.id = films.director_id;
 
+################################################################################
+########################## Many to Many Relationships ##########################
+
+ex: books and categories
+Categories will have many books per category.
+Books can be in multiple categories.
+
+- we integrate a 3rd table 'books_categories'
+Columns: book_id INTEGER FOREIGN KEY (books.id)
+         category_id INTEGER FOREIGN KEY (categories.id)
+
+'JOIN TABLE' : books_categories
+
+(Q) Should join tables include a primary key column?
+    'It depends. Rails framework now suggests that all join tables include a PK.
+    As a result, it treats these tables as first-class entities in the system.'
+
+# PRACTIC PROBLEMS
+- import table
+  saved sql file as many_many.sql
+  psql -d sql_course < many_many.sql
+  psql -d sql_course
+
+  3 new tables: books, books_categories, categories
+
+# 1.
+SELECT books.id, books.author, string_agg(categories.name, ', ') AS categories
+FROM books
+  INNER JOIN books_categories ON books.id = books_categories.book_id
+  INNER JOIN categories ON books_categories.category_id = categories.id
+GROUP BY books.id
+ORDER BY books.id;
+
+# 2.
+- insert new data
+
+ALTER TABLE books ALTER COLUMN title TYPE VARCHAR(50);
+
+INSERT INTO books (title, author) VALUES
+  ('Sally Ride: America''s First Woman in Space', 'Lynn Sherr'),
+  ('Jane Eyre', 'Charlotte Brontë'),
+  ('Vij''s: Elegant and Inspired Indian Cuisine', 'Meeru Dhalwala and Vikram Vij');
+
+# add new categories
+INSERT INTO categories (name) VALUES
+('Space Exploration'),
+('Cookbook'),
+('South Asia');
+
+# make the connection between new books data and existing categories
+INSERT INTO books_categories VALUES
+  (4, 5),
+  (4, 1),
+  (4, 7),
+  (5, 2),
+  (5, 4),
+  (6, 8),
+  (6, 1),
+  (6, 9);
+
+# 3.
+add CHECK constraint in books_categories that each row is unique
+
+ALTER TABLE books_categories ADD UNIQUE (book_id, category_id);
+
+SELECT categories.name AS name, COUNT(books.id) AS book_count, string_agg(books.title, ', ') AS book_titles
+FROM categories
+  INNER JOIN books_categories ON categories.id = books_categories.category_id
+  INNER JOIN books ON books_categories.book_id = books.id
+GROUP BY categories.name
+ORDER BY categories.name ASC;
+
+###############################################################################
+############## Converting 1:M Relationship to a M:M relationship ###############
+
+- changing a 1:many relationship to Many:Many
+
+- in our example, movies DB and directors
+  reconnected to sql_book DB
+  re-saved sql file from problem -> convert_many_many.sql
+  reloaded the SQL DB
+  $ psql -d sql_book < convert_many_many.sql
+  $ psql -d sql_book
+
+# 2. Write SQL statement to add PRIMARY KEY column to FILMS
+ALTER TABLE films ADD COLUMN id serial PRIMARY KEY;
+
+# 3. SQL statement to allow film to have multiple directors.
+#     and directors to have multiple films
+# 4.
+# 5.
+
+First, remove foreign key constraint in FILMS table
+Second, create our join table
+Third, link data in FILMS table where director_id is linked to DIRECTOR table.
+Fourth, delete director_id FROM FILMS table.
+
+ALTER TABLE films DROP CONSTRAINT films_director_id_fkey;
+
+CREATE TABLE films_directors (
+  films_id integer NOT NULL,
+  directors_id integer NOT NULL,
+  FOREIGN KEY (films_id) REFERENCES films(id),
+  FOREIGN KEY (directors_id) REFERENCES directors(id)
+);
+
+INSERT INTO films_directors VALUES
+  (1, 1),
+  (2, 2),
+  (3, 3),
+  (4, 4),
+  (5, 5),
+  (6, 6),
+  (7, 3),
+  (8, 7),
+  (9, 8),
+  (10, 4);
+
+ALTER TABLE films DROP COLUMN director_id;
+
+# 6.
+
+SELECT films.title, directors.name
+  FROM films
+    INNER JOIN films_directors ON films.id = films_directors.films_id
+    INNER JOIN directors ON films_directors.directors_id = directors.id
+ORDER BY title ASC;
+
+# 7.
+- insert new data
+
+INSERT INTO films (title, year, genre, duration) VALUES
+  ('Fargo', 1996, 'comedy', 98),
+  ('No Country for Old Men', 2007, 'western', 122),
+  ('Sin City', 2005, 'crime', 124),
+  ('Spy Kids', 2001, 'scifi', 88);
+
+INSERT INTO directors (name) VALUES
+  ('Joel Coen'),
+  ('Ethan Coen'),
+  ('Frank Miller'),
+  ('Robert Rodriguez');
 
 
+INSERT INTO films_directors VALUES
+  (11, 9),
+  (12, 9),
+  (12, 10),
+  (13, 11),
+  (13, 12),
+  (14, 12);
 
+# 8.
+- count number of films per director.
+- sort by greatest number of films first, then name in alphabetical order
 
-
-
-
-
-
-
-
-
-.
+SELECT directors.name AS director, COUNT(films.id) AS films
+  FROM directors
+    INNER JOIN films_directors ON films_directors.directors_id = directors.id
+    INNER JOIN films ON films.id = films_directors.films_id
+  GROUP BY directors.name
+  ORDER BY films DESC, name ASC;
