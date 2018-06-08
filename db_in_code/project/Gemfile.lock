@@ -1,0 +1,16 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    pg (1.0.0-x64-mingw32)
+
+PLATFORMS
+  x64-mingw32
+
+DEPENDENCIES
+  pg
+
+RUBY VERSION
+   ruby 2.3.3p222
+
+BUNDLED WITH
+   1.15.3
