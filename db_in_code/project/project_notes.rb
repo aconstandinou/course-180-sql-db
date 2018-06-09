@@ -112,9 +112,65 @@ Yes. At the moment, there is no check other than within our SQL table to see
 ################################################################################
 ######################### HANDLING PARAMETERS SAFELY ###########################
 
+"pg" gem has a piece of functionality incorporated to help mitigate SQL injection attacks.
 
+instead of "PG::Connection#exec", well use "PG::Connection#exec_params"
+# documentation: https://deveiate.org/code/pg/PG/Connection.html#method-i-exec_params
 
+seems like PostgreSQL binds parameters as $1, $2, $3 inside SQL query.
+0th element of the params array is bound to $1
 
+example using our current DB
+
+As a review, here is how to execute a simple SQL statement using PG::Connection#exec
+>> connection.exec("SELECT 1 + 1").values
+=> [["2"]]
+
+Now, lets use PG::Connection#exec_param
+>> connection.exec_params("SELECT 1 + $1", [1]).values
+=> [["2"]]
+
+# Note that we arent adding quotes around the placeholder within the statement
+>> connection.exec_params("SELECT upper($1)", ["test"]).values
+=> [["TEST"]]
+
+# There can be as many placeholders as needed in the statement, as long as the
+#   same number of values are passed in the second argument Array to #exec_params:
+>> connection.exec_params("SELECT position($1 in $2)", ["t", "test"]).values
+=> [["1"]]
+
+# Practice Problems
+
+# 1. What happens if you use two placeholders in the first argument to PG::Connection#exec_params,
+#    but only one in the Array of values used to fill in those placeholders?
+our test:
+connection.exec_params("SELECT position($1 in $2)", ["t"]).values
+
+our result:
+PG::ProtocolViolation: ERROR: bind message supplies 1 parameters but prepared statemtnt "" requires 2
+
+# 2. Update the code within the add_expense method to use exec_params instead of exec.
+
+def add_expense(amount, memo)
+  date = Date.today
+
+  sql = "INSERT INTO expenses (amount, memo, created_on) VALUES ($1, $2, $3)"
+  CONNECTION.exec_params(sql, [amount, memo, date])
+end
+
+# 3. What happens when the same malicious arguments are passed to the program now?
+
+in the malicious example:
+$ ./expense add 0.01 "', '2015-01-01'); DROP TABLE expenses; --"
+
+Answer: it still is added to our list, and just looks odd.
+
+running this below, we can its added to our list
+$ expense.rb list
+
+4  | 2018-06-07 |           14.56 | Pencils
+...
+10 | 2018-06-09 |            0.01 | ', '2015-01-01'); DROP TABLE expenses; --
 
 
 
