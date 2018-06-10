@@ -8,6 +8,22 @@ class ExpenseData
 
   def initialize
     @connection = PG.connect(dbname: "expenses")
+    setup_schema
+  end
+
+  def setup_schema
+    sql = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'expenses';"
+    table_result = connection.exec(sql)
+    if table_result.ntuples == 0
+      @connection.exec <<~SQL
+        CREATE TABLE expenses (
+          id serial PRIMARY KEY,
+          amount numeric(6,2) NOT NULL CHECK (amount >= 0.01),
+          memo text NOT NULL,
+          created_on date NOT NULL
+        );
+      SQL
+    end
   end
 
   def add_expense(amount, memo)
@@ -19,7 +35,7 @@ class ExpenseData
 
   def list_expenses
     result = connection.exec "SELECT * FROM expenses;"
-    display_count(expenses)
+    display_count(result)
     display_expenses(result) if result.ntuples > 0
   end
 
@@ -66,7 +82,7 @@ class ExpenseData
   end
 
   def display_count(result)
-    count = expenses.ntuples
+    count = result.ntuples
     if count == 0
       puts "There are no expenses."
     elsif count == 1
