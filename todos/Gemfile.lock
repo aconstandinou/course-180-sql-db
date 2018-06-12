@@ -4,6 +4,8 @@ GEM
     backports (3.6.8)
     erubis (2.7.0)
     multi_json (1.12.1)
+    pg (1.0.0)
+    pg (1.0.0-x64-mingw32)
     rack (1.6.4)
     rack-protection (1.5.3)
       rack
@@ -24,11 +26,13 @@ GEM
 
 PLATFORMS
   ruby
+  x64-mingw32
 
 DEPENDENCIES
   erubis
+  pg
   sinatra (~> 1.4.7)
   sinatra-contrib
 
 BUNDLED WITH
-   1.12.5
+   1.15.3
