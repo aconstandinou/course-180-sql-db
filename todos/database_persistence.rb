@@ -20,7 +20,9 @@ class DatabasePersistance
     # we need to convert 'result' into hash that our app requires to load data
     #   hash with symbol keys
     tuple = result.first
-    {id: tuple["id"], name: tuple["name"], todos: []}
+    list_id = tuple["id"].to_i
+    todos = find_todos_list(list_id)
+    {id: list_id, name: tuple["name"], todos: todos}
   end
 
   def all_lists
@@ -28,7 +30,9 @@ class DatabasePersistance
     result = query(sql)
 
     result.map do |tuple|
-      {id: tuple["id"], name: tuple["name"], todos: []}
+      list_id = tuple["id"].to_i
+      todos = find_todos_list(list_id)
+      {id: list_id, name: tuple["name"], todos: todos}
     end
   end
 
@@ -71,4 +75,18 @@ class DatabasePersistance
     # end
   end
 
+  private
+
+  def find_todos_list(list_id)
+    todo_sql = "SELECT * FROM todos WHERE list_id = $1"
+    # this will return PG result object that contains data for every row in todos table with matching list_id
+    todos_result = query(todo_sql, list_id)
+
+    todos_result.map do |todo_tuple|
+      { id: todo_tuple["id"].to_i,
+        name: todo_tuple["name"],
+        completed: todo_tuple["completed"] == "t" } # this solves our issue in string "t" from DB vs. boolean in Ruby.
+    end
+  end
+  
 end

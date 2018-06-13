@@ -53,3 +53,37 @@ require "pg"
     @logger.info("#{sql_statement}: #{params}")
     @db.exec_params(sql_statement, params)
   end
+
+######################### LOADING RECORDS FROM DATABASE #########################
+
+- as we were transitioning our session data over to our DB,
+    and as we query from SQL, data returned are strings. We noticed that a bool
+    value in a method was checking values of "t" and "f" and in Ruby, objects are truthy.
+
+# todo.rb
+# method having an issue
+
+def todos_remaining_count(list)
+  list[:todos].count { |todo| !todo[:completed] }
+end
+
+# database_persistence.rb
+    def all_lists
+      sql = "SELECT * FROM lists;"
+      result = query(sql)
+
+      result.map do |tuple|
+        list_id = tuple["id"].to_i
+        todo_sql = "SELECT * FROM todos WHERE list_id = $1"
+        # this will return PG result object that contains data for every row in todos table with matching list_id
+        todos_result = query(todo_sql, list_id)
+
+        todos = todos_result.map do |todo_tuple|
+          { id: todo_tuple["id"].to_i,
+            name: tuple["name"],
+            completed: todo_tuple["completed"] == "t" } # this solves our issue in string "t" from DB vs. boolean in Ruby.
+        end
+
+        {id: list_id, name: tuple["name"], todos: todos}
+      end
+    end
