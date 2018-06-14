@@ -125,15 +125,55 @@ this helps fix code reload after its been sent into production and any related i
 
 1. Make sure code works and you can commit to git repo locally.
 
+2. - Specify Ruby version in Gemfile
+   - Add puma to gemfile
+   - run bundle install
+   - add Procfile
+   - Verify that everything is working -> heroku local
+   - make sure that any development specific code wont run in production
 
+3. Update code to open DB like this:
+This code uses the DATABASE_URL environment variable to determine the database name when running on Heroku.
 
+# @db = if Sinatra::Base.production?
+#         PG.connect(ENV['DATABASE_URL'])
+#       else
+#         PG.connect(dbname: "todos")
+#       end
 
+4. Create an application on Heroku by running heroku apps:create within the projects directory:
+Use your own Heroku login name or any unique string in place of xyzzy, and use an appropriate app name for the 180-todos part.
 
+actually used: heroku apps:create sql-ruby-180-todos
 
+# $ heroku apps:create xyzzy-180-todos
+# Creating ⬢ xyzzy-180-todos... done
+# https://xyzzy-180-todos.herokuapp.com/ | https://git.heroku.com/xyzzy-180-todos.git
 
+5. Create db on Heroku
+# $ heroku addons:create heroku-postgresql:hobby-dev -a=sql-ruby-180-todos
 
+6. If you have some code to create your database in schema.sql, you can create the database by running:
+# $ heroku pg:psql < schema.sql -a=sql-ruby-180-todos
 
+7. Were using Herokus free hobby-dev PostgreSQL database plan, which only allows for a
+   maximum of 20 open database connections at once. If we exceed this limit, then our
+  application will throw an error. Add the following code into your application to
+  ensure that you dont exceed that 20 connection limit.
 
+#todo.rb
+# after do
+#   @storage.disconnect
+# end
 
+#database_persistence.rb
+# def disconnect
+#   @db.close
+# end
+
+8. Commit any changes you made above.
+
+9. Deploy the application to Heroku using git push heroku master
+  (if youre working on a branch other than master, youll need to use its name in this command instead).
 
 .

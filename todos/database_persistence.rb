@@ -3,7 +3,11 @@ require "pg"
 class DatabasePersistance
 
   def initialize(logger)
-    @db = PG.connect(dbname: "todos")
+    @db = if Sinatra::Base.production?
+        PG.connect(ENV['DATABASE_URL'])
+      else
+        PG.connect(dbname: "todos")
+      end
     @logger = logger
   end
 
@@ -14,6 +18,10 @@ class DatabasePersistance
     @db.exec_params(sql_statement, params)
   end
 
+  def disconnect
+    @db.close
+  end
+  
   def find_list(id)
     sql = "SELECT * FROM lists WHERE id = $1"
     result = query(sql, id)
