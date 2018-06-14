@@ -87,3 +87,53 @@ end
         {id: list_id, name: tuple["name"], todos: todos}
       end
     end
+
+
+######################### SOLVING THE RELOADING PROBLEM #########################
+
+- any code outside of todo.rb when changed, needs to kill and restart the server.
+- why? require "sinatra/reloader"
+
+defining a route, or helper or any functionality in Sinatra it requires a reload
+
+- our database_persistence.rb file doesnt have that reloader.
+
+Solution -> within todo.rb and configure block:
+
+configure do
+  enable :sessions
+  set :session_secret, 'secret'
+  set :erb, :escape_html => true
+  also_reload "database_persistence.rb" # included extension of the file .rb, different than Ruby require system
+end
+
+########################### DEVELOPMENT CONFIGURATION ###########################
+
+- if you recall, Sinatra knows what environment were in via the rack.env variable
+- Sinatra provides "development?" method and returns a bool value.
+
+in our todo.rb app, we can set another configure block to handle all things we want in development
+
+configure(:development) do
+  require "sinatra/reloader"
+  also_reload "database_persistence.rb"
+end
+
+this helps fix code reload after its been sent into production and any related issues.
+
+########################## DEPLOYING PG APPS TO HEROKU ##########################
+
+1. Make sure code works and you can commit to git repo locally.
+
+
+
+
+
+
+
+
+
+
+
+
+.
