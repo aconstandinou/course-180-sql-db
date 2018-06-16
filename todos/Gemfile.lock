@@ -31,7 +31,7 @@ PLATFORMS
 
 DEPENDENCIES
   erubis
-  pg
+  pg (~> 1.0.0)
   puma
   sinatra (~> 1.4.7)
   sinatra-contrib
