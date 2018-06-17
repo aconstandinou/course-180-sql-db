@@ -80,11 +80,48 @@ views/lists.erb:7:       <%= todos....
 
 # this is super helpful in isolating all areas once we change a method or the app
 
+# logging into PostgreSQL via CLI, we started working on creating a SQL query
+#   that could also help with getting our lists and # of todos associated.
+#   We used a JOIN to help out.
 
+NOTE: after solving for a complex SQL query, metacommand "\e" will output the last
+  SQL command to notepad.
 
+# so far SQL query to get us number of todos associated per list
 
+SELECT lists.*, COUNT(todos.list_id) AS todos_count
+ FROM lists
+ JOIN todos ON todos.list_id = lists.id
+GROUP BY lists.id;
 
+# still missing our number of completed todos/total todos per list and to accomplish this
+#  were going to turn all true values in todos[completed] to null values.
 
+SELECT COUNT(NULLIF(todos.completed, true)) FROM todos;
 
+# merging our existing SELECT queries
+
+SELECT lists.*,
+       COUNT(todos.list_id) AS todos_count,
+       COUNT(NULLIF(todos.completed, true)) AS todos_remaining
+       FROM lists
+LEFT JOIN todos ON todos.list_id = lists.id
+GROUP BY lists.id;
+
+# we also need to add an ORDER BY clause since the SQL query is returning data
+#   in the order it was created.
+
+SELECT lists.*,
+       COUNT(todos.list_id) AS todos_count,
+       COUNT(NULLIF(todos.completed, true)) AS todos_remaining
+       FROM lists
+LEFT JOIN todos ON todos.list_id = lists.id
+GROUP BY lists.id
+ORDER BY lists.name;
+
+# TWO EFFICIENCIES (OPTIMIZATION) FOR OUR COMPLEX SQL QUERY:
+# 1 - less data needs to be sent over the network which would be more obvious in much
+#     larger data sets.
+# 2 - all data is coming back into Ruby to be processed.
 
 .
